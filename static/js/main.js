@@ -7,7 +7,8 @@ const {
 let FIRST_TIME = Infinity;
 let LAST_TIME = -Infinity;
 let DURATION = 1;
-let HEATMAP_SPAN_DAYS = 32; // a month, with some buffer
+let HEATMAP_COUNT_VERT = 32; // a month, with some buffer
+let HEATMAP_COUNT_HORIZ = 100;
 let HISTOGRAM_RESOLUTION = 50;
 
 async function fetchHistoryItems() {
@@ -87,17 +88,50 @@ class Dashboard extends Component {
 	}
     renderHeatmap() {
         requestAnimationFrame(() => {
+            if (!this.histItems.length) {
+                return;
+            }
+
             const ctx = this.ctx;
             const {width, height} = this.canvas.getBoundingClientRect();
-            const day_increment = height / 32;
-            const minute_increment = width / 86400;
+            this.canvas.width = width;
+            this.canvas.height = height;
+            const RESOLUTION = DURATION / (HEATMAP_COUNT_VERT * HEATMAP_COUNT_HORIZ);
+            const VERT_INCREMENT = height / HEATMAP_COUNT_VERT;
+            const HORIZ_INCREMENT = width / HEATMAP_COUNT_HORIZ;
 
-            // TODO: thing.
-            const drawDay = dayNumber => {
+            const searchedVisitTimes = this.histItems
+                .map(item => Object.keys(item.visits))
+                .flat()
+                .map(time => +time);
 
+            let searchedVisitCounts = new Array(HEATMAP_COUNT_VERT * HEATMAP_COUNT_HORIZ).fill(0);
+            for (const time of searchedVisitTimes) {
+                const diff = (time - FIRST_TIME) / DURATION * (HEATMAP_COUNT_VERT * HEATMAP_COUNT_HORIZ);
+                searchedVisitCounts[Math.floor(diff)] ++;
             }
-            const drawMinute = minuteNumber => {
+            searchedVisitCounts = searchedVisitCounts.filter(n => !isNaN(n));
 
+            const MAX_COUNT = Math.max(...searchedVisitCounts);
+
+            const drawCell = (x, y, count) => {
+                const byte = Math.floor((MAX_COUNT - count) / MAX_COUNT * 255.99999999).toString(16).padStart(2, '0');
+
+                ctx.fillStyle = '#' + byte + byte + byte;
+                ctx.beginPath();
+                ctx.rect(
+                    x * HORIZ_INCREMENT,
+                    y * VERT_INCREMENT,
+                    (x + 1) * HORIZ_INCREMENT,
+                    (y + 1) * VERT_INCREMENT,
+                );
+                ctx.fill();
+            }
+
+            for (let y = 0; y < HEATMAP_COUNT_VERT; y ++) {
+                for (let x = 0; x < HEATMAP_COUNT_HORIZ; x ++) {
+                    drawCell(x, y, searchedVisitCounts[y * HEATMAP_COUNT_VERT + x]);
+                }
             }
         });
     }
