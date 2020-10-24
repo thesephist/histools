@@ -16,29 +16,18 @@ writeFile := std.writeFile
 split := str.split
 trim := str.trim
 index := str.index
-checkRange := str.checkRange
 
 Newline := char(10)
 
 SQLiteBinary := 'sqlite3'
 DBPath := args().2
 
-ascii? := checkRange(31, 128)
-
 parse := lineOutput => (
 	splitPair := pairLine => (
 		splitIdx := index(pairLine, ' = ')
-		value := slice(pairLine, splitIdx + 3, len(pairLine))
-
-		` since we serialize to JSON, validate that value text encoding is
-			valid ASCII or escaped `
-		each(value, (c, i) => ascii?(c) :: {
-			true -> ()
-			false -> value.(i) := '?'
-		})
 		[
 			slice(pairLine, 0, splitIdx)
-			value
+			slice(pairLine, splitIdx + 3, len(pairLine))
 		]
 	)
 
