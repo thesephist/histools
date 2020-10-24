@@ -9,14 +9,110 @@ body {
 	box-sizing: border-box;
 	width: 100vw;
 	height: 100vh;
+    background: #f8f8f8;
 	overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    --paper-accent: #37598c;
+}
+
+header {
+    font-size: 18px;
+}
+
+.dashboard {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    height: 0;
+    width: 100%;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.sidebar {
+    width: 500px;
+    flex-shrink: 0;
+    flex-grow: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.searchbar input {
+    font-size: 18px;
+    padding: .5em .8em;
+    width: calc(100% - 16px);
+    margin: 8px;
+}
+
+.heatmap {
+    width: 0;
+    flex-shrink: 1;
+    flex-grow: 1;
+    height: 100%;
+}
+
+.heatmap canvas {
+    background: #fff;
+    height: calc(100% - 16px);
+    width: calc(100% - 16px);
+    margin: 8px;
+    box-shadow: 0 5px 12px -2px rgb(0 0 0 / 40%);
+}
+
+.visits {
+    overflow-y: auto;
+    padding: 0 8px 8px 8px;
+}
+
+.visits:empty::after {
+    content: 'No matches';
+    display: block;
+    text-align: center;
+    margin: 2em 0;
+    font-weight: bold;
+    color: var(--paper-accent);
 }
 
 .visit {
 	margin-bottom: 6px;
+    position: relative;
+}
+
+.visit-title {
+    width: calc(100% - 2em);
+    margin-bottom: 6px;
 }
 
 .visit .visit-url {
 	font-size: .8em;
+    word-break: break-all;
+}
+
+.visit .visit-url a {
+    color: #777;
+    text-decoration: none;
+}
+
+.visit-count {
+    position: absolute;
+    top: .5em;
+    right: 1em;
+    font-weight: bold;
+    color: var(--paper-accent);
+}
+
+.visit-histogram {
+    height: 8px;
+    display: flex;
+    flex-direction: row;
+    margin-top: 6px;
+}
+
+.visit-histogram .histo {
+    width: 0;
+    flex-grow: 1;
+    background: var(--paper-accent);
 }
 
