@@ -1,0 +1,22 @@
+html,
+body {
+	margin: 0;
+	font-size: 14px;
+	font-family: system-ui, sans-serif;
+}
+
+.app {
+	box-sizing: border-box;
+	width: 100vw;
+	height: 100vh;
+	overflow: hidden;
+}
+
+.visit {
+	margin-bottom: 6px;
+}
+
+.visit .visit-url {
+	font-size: .8em;
+}
+
