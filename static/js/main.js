@@ -7,9 +7,12 @@ const {
 let FIRST_TIME = Infinity;
 let LAST_TIME = -Infinity;
 let DURATION = 1;
-let HEATMAP_COUNT_VERT = 32; // a month, with some buffer
+let HISTOGRAM_RESOLUTION = 32; // a month, with some buffer
+let HEATMAP_COUNT_VERT = 24 * 2; // a month, with some buffer
 let HEATMAP_COUNT_HORIZ = 100;
-let HISTOGRAM_RESOLUTION = 50;
+
+// Apple's timestamps count time from midnight Jan 1 2000
+const APPLE_UNIX_ZERO_TIME_OFFSET = 946684800;
 
 async function fetchHistoryItems() {
 	const fetchedHistItems = await fetch('/data.json').then(resp => resp.json());
@@ -38,6 +41,8 @@ async function fetchHistoryItems() {
 		if (a.visit_count < b.visit_count) return 1;
 		return 0;
 	});
+    FIRST_TIME = Math.floor(FIRST_TIME / 86400) * 86400;
+    LAST_TIME = (Math.floor(LAST_TIME / 86400) + 1) * 86400;
     DURATION = LAST_TIME - FIRST_TIME;
     return histItems;
 }
@@ -74,17 +79,60 @@ function HistItem({
 	</div>`;
 }
 
+class DateTimeCountDisplay extends Component {
+    init() {
+        this.datetime = new Date();
+        this.count = 0;
+    }
+    setDateTimeCount(datetime, count) {
+        this.datetime = datetime;
+        this.count = count;
+        this.render();
+    }
+    compose() {
+        return jdom`<div class="datetimecount">
+            ${this.datetime.toString()}
+            ${this.count} visits
+        </div>`
+    }
+}
+
 class Dashboard extends Component {
 	init() {
 		this.search = '';
         this.canvas = document.createElement('canvas');
+        this.canvas.addEventListener('mousemove', evt => {
+            const {clientX, clientY} = evt.pointers ? evt.pointers[0] : evt;
+            const {x, y} = this.canvas.getBoundingClientRect();
+            const boundX = clientX - x;
+            const boundY = clientY - y;
+
+            const xIndex = Math.floor(boundX / this.HORIZ_INCREMENT);
+            const yIndex = Math.floor(boundY / this.VERT_INCREMENT);
+            const index = yIndex * HEATMAP_COUNT_HORIZ + xIndex;
+
+            const dateFromDarwinZero = FIRST_TIME + index * (DURATION / HEATMAP_COUNT_VERT / HEATMAP_COUNT_HORIZ);
+            const unixDate = dateFromDarwinZero + APPLE_UNIX_ZERO_TIME_OFFSET;
+            const jsDate = unixDate * 1000;
+
+            this.dtc.setDateTimeCount(
+                new Date(jsDate),
+                this.searchedVisitCounts[index],
+            );
+        });
         this.ctx = this.canvas.getContext('2d');
+
+        this.searchedVisitCounts = [0];
+        this.VERT_INCREMENT = Infinity;
+        this.HORIZ_INCREMENT = Infinity;
 
 		this.histItems = [];
 		fetchHistoryItems().then(data => {
 			this.histItems = data;
 			this.render();
 		});
+
+        this.dtc = new DateTimeCountDisplay();
 	}
     renderHeatmap() {
         requestAnimationFrame(() => {
@@ -97,8 +145,10 @@ class Dashboard extends Component {
             this.canvas.width = width;
             this.canvas.height = height;
             const RESOLUTION = DURATION / (HEATMAP_COUNT_VERT * HEATMAP_COUNT_HORIZ);
-            const VERT_INCREMENT = height / HEATMAP_COUNT_VERT;
-            const HORIZ_INCREMENT = width / HEATMAP_COUNT_HORIZ;
+            this.VERT_INCREMENT = height / HEATMAP_COUNT_VERT;
+            this.HORIZ_INCREMENT = width / HEATMAP_COUNT_HORIZ;
+            const VERT_INCREMENT = this.VERT_INCREMENT;
+            const HORIZ_INCREMENT = this.HORIZ_INCREMENT;
 
             const searchedVisitTimes = this.histItems
                 .map(item => Object.keys(item.visits))
@@ -110,9 +160,9 @@ class Dashboard extends Component {
                 const diff = (time - FIRST_TIME) / DURATION * (HEATMAP_COUNT_VERT * HEATMAP_COUNT_HORIZ);
                 searchedVisitCounts[Math.floor(diff)] ++;
             }
-            searchedVisitCounts = searchedVisitCounts.filter(n => !isNaN(n));
+            this.searchedVisitCounts = searchedVisitCounts.filter(n => !isNaN(n));
 
-            const MAX_COUNT = Math.max(...searchedVisitCounts);
+            const MAX_COUNT = Math.max(...this.searchedVisitCounts);
 
             const drawCell = (x, y, count) => {
                 const byte = Math.floor((MAX_COUNT - count) / MAX_COUNT * 255.99999999).toString(16).padStart(2, '0');
@@ -130,7 +180,7 @@ class Dashboard extends Component {
 
             for (let y = 0; y < HEATMAP_COUNT_VERT; y ++) {
                 for (let x = 0; x < HEATMAP_COUNT_HORIZ; x ++) {
-                    drawCell(x, y, searchedVisitCounts[y * HEATMAP_COUNT_VERT + x]);
+                    drawCell(x, y, this.searchedVisitCounts[y * HEATMAP_COUNT_HORIZ + x]);
                 }
             }
         });
@@ -142,6 +192,7 @@ class Dashboard extends Component {
         this.renderHeatmap();
 
 		return jdom`<div class="dashboard">
+            ${this.dtc.node}
 			<div class="heatmap">
                 ${this.canvas}
 			</div>
