@@ -8,8 +8,8 @@ let FIRST_TIME = Infinity;
 let LAST_TIME = -Infinity;
 let DURATION = 1;
 
-let HISTOGRAM_RESOLUTION = 32; // a month, with some buffer
-let HEATMAP_COUNT_VERT = 32; // a month, with some buffer, so each row = 1 day
+let HISTOGRAM_RESOLUTION = 32;
+let HEATMAP_COUNT_VERT = 32;
 let HEATMAP_COUNT_HORIZ = 100;
 
 // Apple's timestamps count time from midnight Jan 1 2000
@@ -49,6 +49,9 @@ async function fetchHistoryItems() {
     FIRST_TIME = Math.floor(FIRST_TIME / 86400) * 86400;
     LAST_TIME = (Math.floor(LAST_TIME / 86400) + 1) * 86400;
     DURATION = LAST_TIME - FIRST_TIME;
+
+    // a month, with some buffer, so each row = 1 day
+    HISTOGRAM_RESOLUTION = HEATMAP_COUNT_VERT = DURATION / 86400;
     return histItems;
 }
 
