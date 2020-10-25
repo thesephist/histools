@@ -1,7 +1,7 @@
 const {
-	Component,
-	Record,
-	Store,
+    Component,
+    Record,
+    Store,
 } = window.Torus;
 
 let FIRST_TIME = Infinity;
@@ -15,32 +15,32 @@ let HEATMAP_COUNT_HORIZ = 100;
 const APPLE_UNIX_ZERO_TIME_OFFSET = 946684800;
 
 async function fetchHistoryItems() {
-	const fetchedHistItems = await fetch('/data.json').then(resp => resp.json());
-	const histItems = [];
-	for (let i = 0;; i ++) {
-		if (i in fetchedHistItems) {
-			histItems.push(fetchedHistItems[i]);
+    const fetchedHistItems = await fetch('/data.json').then(resp => resp.json());
+    const histItems = [];
+    for (let i = 0;; i ++) {
+        if (i in fetchedHistItems) {
+            histItems.push(fetchedHistItems[i]);
 
-            const timestamps = Object.keys(fetchedHistItems[i].visits).map(n => +n).sort();
+            const timestamps = Object.keys(fetchedHistItems[i].visits).map(n => parseFloat(n)).sort();
             if (FIRST_TIME > timestamps[0]) {
                 FIRST_TIME = timestamps[0];
             }
             if (LAST_TIME < timestamps[timestamps.length - 1]) {
                 LAST_TIME = timestamps[timestamps.length - 1];
             }
-		} else {
-			break;
-		}
-	}
+        } else {
+            break;
+        }
+    }
     for (const item of histItems) {
         item.visit_count = +item.visit_count;
     }
     histItems.sort((a, b) => {
-		// sort in visit_count desc
-		if (a.visit_count > b.visit_count) return -1;
-		if (a.visit_count < b.visit_count) return 1;
-		return 0;
-	});
+        // sort in visit_count desc
+        if (a.visit_count > b.visit_count) return -1;
+        if (a.visit_count < b.visit_count) return 1;
+        return 0;
+    });
     FIRST_TIME = Math.floor(FIRST_TIME / 86400) * 86400;
     LAST_TIME = (Math.floor(LAST_TIME / 86400) + 1) * 86400;
     DURATION = LAST_TIME - FIRST_TIME;
@@ -48,20 +48,20 @@ async function fetchHistoryItems() {
 }
 
 function HistItem({
-	url,
-	visits,
-	visit_count,
+    url,
+    visits,
+    visit_count,
 }) {
-	let title = '(unknown)'
-	const visitTimes = Object.keys(visits);
-	if (visitTimes.length) {
-		title = visits[visitTimes[0]];
-	}
+    let title = '(unknown)'
+    const visitTimes = Object.keys(visits);
+    if (visitTimes.length) {
+        title = visits[visitTimes[0]];
+    }
 
-	return jdom`<div class="visit paper">
+    return jdom`<div class="visit paper">
         <div class="visit-count">${visit_count}</div>
-		<div class="visit-title">${title || '(unknown)'}</div>
-		<div class="visit-url">
+        <div class="visit-title">${title || '(unknown)'}</div>
+        <div class="visit-url">
             <a href=${url} target="_blank">
                 <code>${url}</code>
             </a>
@@ -70,13 +70,27 @@ function HistItem({
             ${new Array(HISTOGRAM_RESOLUTION).fill(0).map((_, day) => {
                 const lo = day * (DURATION / HISTOGRAM_RESOLUTION) + FIRST_TIME;
                 const hi = (day + 1) * (DURATION / HISTOGRAM_RESOLUTION) + FIRST_TIME;
-                return visitTimes.filter(time => lo < +time && +time < hi).length;
-            }).map(count => jdom`<div class="histo"
-                title="${count} visits"
-                style="opacity:${Math.sqrt(count/24)}">
-            </div>`)}
+                let count = 0;
+                for (let i = 0, len = visitTimes.length; i < len; i ++) {
+                    const t = parseFloat(visitTimes[i]);
+                    if (lo < t && t < hi) count++;
+                }
+                return count;
+            }).map(count => {
+                // This is a critical path, so we bypass the template parser
+                return {
+                    tag: 'div',
+                    attrs: {
+                        class: 'histo',
+                        title: `${count} visits`,
+                        style: {
+                            opacity: Math.sqrt(count/24),
+                        },
+                    },
+                }
+            })}
         </div>
-	</div>`;
+    </div>`;
 }
 
 class DateTimeCountDisplay extends Component {
@@ -109,12 +123,9 @@ class DateTimeCountDisplay extends Component {
 }
 
 class Dashboard extends Component {
-	init() {
-		this.search = '';
+    init() {
+        this.search = '';
         this.canvas = document.createElement('canvas');
-        this.canvas.addEventListener('mouseover', evt => {
-            this.node.classList.add('hover');
-        });
         this.canvas.addEventListener('mouseout', evt => {
             this.node.classList.remove('hover');
         });
@@ -132,11 +143,14 @@ class Dashboard extends Component {
             const unixDate = dateFromDarwinZero + APPLE_UNIX_ZERO_TIME_OFFSET;
             const jsDate = unixDate * 1000;
 
-            this.dtc.setDateTimeCount(
-                new Date(jsDate),
-                this.searchedVisitCounts[index],
-            );
-            this.dtc.setPosition(clientX, clientY);
+            requestAnimationFrame(() => {
+                this.node.classList.add('hover');
+                this.dtc.setDateTimeCount(
+                    new Date(jsDate),
+                    this.searchedVisitCounts[index],
+                );
+                this.dtc.setPosition(clientX, clientY);
+            });
         });
         this.ctx = this.canvas.getContext('2d');
 
@@ -144,14 +158,14 @@ class Dashboard extends Component {
         this.VERT_INCREMENT = Infinity;
         this.HORIZ_INCREMENT = Infinity;
 
-		this.histItems = [];
-		fetchHistoryItems().then(data => {
-			this.histItems = data;
-			this.render();
-		});
+        this.histItems = [];
+        fetchHistoryItems().then(data => {
+            this.histItems = data;
+            this.render();
+        });
 
         this.dtc = new DateTimeCountDisplay();
-	}
+    }
     renderHeatmap(searchedItems) {
         requestAnimationFrame(() => {
             if (!this.histItems.length) {
@@ -168,10 +182,12 @@ class Dashboard extends Component {
             const VERT_INCREMENT = this.VERT_INCREMENT;
             const HORIZ_INCREMENT = this.HORIZ_INCREMENT;
 
-            const searchedVisitTimes = searchedItems 
-                .map(item => Object.keys(item.visits))
-                .flat()
-                .map(time => +time);
+            const searchedVisitTimes = [];
+            for (const item of searchedItems) {
+                for (const timestamp in item.visits) {
+                    searchedVisitTimes.push(+timestamp);
+                }
+            }
 
             let searchedVisitCounts = new Array(HEATMAP_COUNT_VERT * HEATMAP_COUNT_HORIZ).fill(0);
             for (const time of searchedVisitTimes) {
@@ -183,19 +199,17 @@ class Dashboard extends Component {
             const MAX_COUNT = Math.max(...this.searchedVisitCounts);
 
             const drawCell = (x, y, count) => {
-                const byte = Math.floor((MAX_COUNT - count) / MAX_COUNT * 255.99999999).toString(16).padStart(2, '0');
-
-                ctx.fillStyle = '#' + byte + byte + byte;
-                ctx.beginPath();
-                ctx.rect(
+                const opacity = Math.sqrt(count / MAX_COUNT);
+                ctx.fillStyle = `rgba(64, 89, 140, ${opacity})`;
+                ctx.fillRect(
                     x * HORIZ_INCREMENT,
                     y * VERT_INCREMENT,
-                    (x + 1) * HORIZ_INCREMENT,
-                    (y + 1) * VERT_INCREMENT,
+                    HORIZ_INCREMENT,
+                    VERT_INCREMENT,
                 );
-                ctx.fill();
             }
 
+            ctx.clearRect(0, 0, width, height);
             for (let y = 0; y < HEATMAP_COUNT_VERT; y ++) {
                 for (let x = 0; x < HEATMAP_COUNT_HORIZ; x ++) {
                     drawCell(x, y, this.searchedVisitCounts[y * HEATMAP_COUNT_HORIZ + x]);
@@ -203,47 +217,47 @@ class Dashboard extends Component {
             }
         });
     }
-	compose() {
-		const loweredSearch = this.search.toLowerCase();
-		const searchedItems = this.histItems.filter(item => item.url.toLowerCase().includes(loweredSearch));
+    compose() {
+        const loweredSearch = this.search.toLowerCase();
+        const searchedItems = this.histItems.filter(item => item.url.toLowerCase().includes(loweredSearch));
 
         this.renderHeatmap(searchedItems);
 
-		return jdom`<div class="dashboard">
+        return jdom`<div class="dashboard">
             ${this.dtc.node}
-			<div class="heatmap">
+            <div class="heatmap">
                 ${this.canvas}
-			</div>
-			<div class="sidebar">
-				<div class="searchbar">
-					<input type="text"
-						class="paper"
+            </div>
+            <div class="sidebar">
+                <div class="searchbar">
+                    <input type="text"
+                        class="paper"
                         placeholder="Search urls..."
-						value=${this.search}
+                        value=${this.search}
                         autofocus
-						oninput=${evt => {
-							this.search = evt.target.value;
-							this.render();
-						}}/>
-				</div>
-				<div class="visits">
-					${searchedItems.slice(0, 100).map(HistItem)}
-				</div>
-			</div>
-		</div>`;
-	}
+                        oninput=${evt => {
+                            this.search = evt.target.value;
+                            this.render();
+                        }} />
+                </div>
+                <div class="visits">
+                    ${searchedItems.slice(0, 100).map(HistItem)}
+                </div>
+            </div>
+        </div>`;
+    }
 }
 
 class App extends Component {
-	init() {
-		this.dashboard = new Dashboard();
-	}
-	compose() {
-		return jdom`<div class="app">
-			<header class="accent paper">Histools</header>
-			${this.dashboard.node}
-		</div>`;
-	}
+    init() {
+        this.dashboard = new Dashboard();
+    }
+    compose() {
+        return jdom`<div class="app">
+            <header class="accent paper">Histools</header>
+            ${this.dashboard.node}
+        </div>`;
+    }
 }
 
 const app = new App();

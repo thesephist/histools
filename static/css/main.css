@@ -95,6 +95,10 @@ header {
     text-decoration: none;
 }
 
+.visit .visit-url a:hover {
+    text-decoration: underline;
+}
+
 .visit-count {
     position: absolute;
     top: .5em;
