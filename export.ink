@@ -81,26 +81,29 @@ find := (list, pred) => (sub := i => (
 ))(0)
 
 ` main: parse, save JSON to static/data.json `
-withHistoryItems(items => (
-	withHistoryVisits(visits => (
-		log(f('{{ 0 }} history entries, {{ 1 }} total visits. analyzing...'
-			[len(items), len(visits)]))
+type(args().2) :: {
+	'string' -> withHistoryItems(items => (
+		withHistoryVisits(visits => (
+			log(f('{{ 0 }} history entries, {{ 1 }} total visits. analyzing...'
+				[len(items), len(visits)]))
 
-		each(items, item => item.visits := {})
+			each(items, item => item.visits := {})
 
-		each(visits, visit => (
-			visitItem := find(items, item => item.id = visit.('history_item'))
-			visitItem :: {
-				() -> ()
-				_ -> visitItem.visits.(visit.('visit_time')) := visit.title
-			}
+			each(visits, visit => (
+				visitItem := find(items, item => item.id = visit.('history_item'))
+				visitItem :: {
+					() -> ()
+					_ -> visitItem.visits.(visit.('visit_time')) := visit.title
+				}
+			))
+
+			log('writing database...')
+
+			writeFile('static/data.json', serializeJSON(items), result => result :: {
+				true -> log('write success.')
+				_ -> log('write file.')
+			})
 		))
-
-		log('writing database...')
-
-		writeFile('static/data.json', serializeJSON(items), result => result :: {
-			true -> log('write success.')
-			_ -> log('write file.')
-		})
 	))
-))
+	_ -> log('Please specify a Safari History.db database to analyze')
+}

@@ -17,8 +17,16 @@ body {
     --paper-accent: #37598c;
 }
 
-header {
+header.accent.paper {
     font-size: 18px;
+    display: flex;
+    flex-direction: row;
+    text-align: center;
+    justify-content: space-between;
+}
+
+header a {
+    color: #fff;
 }
 
 .dashboard {

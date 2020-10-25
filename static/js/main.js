@@ -7,17 +7,22 @@ const {
 let FIRST_TIME = Infinity;
 let LAST_TIME = -Infinity;
 let DURATION = 1;
+
 let HISTOGRAM_RESOLUTION = 32; // a month, with some buffer
-let HEATMAP_COUNT_VERT = 32; // a month, with some buffer
+let HEATMAP_COUNT_VERT = 32; // a month, with some buffer, so each row = 1 day
 let HEATMAP_COUNT_HORIZ = 100;
 
 // Apple's timestamps count time from midnight Jan 1 2000
+// whereas JavaScript needs it in a JS / UNIX timestamp since 1970.
+// This diff counts the number seconds between those to zeroes.
 const APPLE_UNIX_ZERO_TIME_OFFSET = 946684800;
 
+// Fetch a JSON output from the Ink export script and pre-process it
+// to be displayed by the Dashboard component.
 async function fetchHistoryItems() {
     const fetchedHistItems = await fetch('/data.json').then(resp => resp.json());
     const histItems = [];
-    for (let i = 0;; i ++) {
+    for (let i = 0; ; i ++) {
         if (i in fetchedHistItems) {
             histItems.push(fetchedHistItems[i]);
 
@@ -177,6 +182,7 @@ class Dashboard extends Component {
             this.canvas.width = width;
             this.canvas.height = height;
             const RESOLUTION = DURATION / (HEATMAP_COUNT_VERT * HEATMAP_COUNT_HORIZ);
+
             this.VERT_INCREMENT = height / HEATMAP_COUNT_VERT;
             this.HORIZ_INCREMENT = width / HEATMAP_COUNT_HORIZ;
             const VERT_INCREMENT = this.VERT_INCREMENT;
@@ -254,7 +260,12 @@ class App extends Component {
     }
     compose() {
         return jdom`<div class="app">
-            <header class="accent paper">Histools</header>
+            <header class="accent paper">
+                <div class="left"><strong>Histools</strong></div>
+                <div class="right">
+                    <a href="https://github.com/thesephist/histools" target="_blank">about</a>
+                </div>
+            </header>
             ${this.dashboard.node}
         </div>`;
     }

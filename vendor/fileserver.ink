@@ -87,6 +87,7 @@ close := listen('0.0.0.0:' + string(PORT), evt => evt.type :: {
 		}
 	)
 })
+log('Histools serving on 0.0.0.0:7800...')
 
 ` handles requests to path with given parameters `
 handlePath := (url, path, end, getElapsed) => stat(path, evt => evt.type :: {
