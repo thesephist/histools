@@ -8,7 +8,7 @@ let FIRST_TIME = Infinity;
 let LAST_TIME = -Infinity;
 let DURATION = 1;
 let HISTOGRAM_RESOLUTION = 32; // a month, with some buffer
-let HEATMAP_COUNT_VERT = 24 * 2; // a month, with some buffer
+let HEATMAP_COUNT_VERT = 32; // a month, with some buffer
 let HEATMAP_COUNT_HORIZ = 100;
 
 // Apple's timestamps count time from midnight Jan 1 2000
@@ -83,16 +83,27 @@ class DateTimeCountDisplay extends Component {
     init() {
         this.datetime = new Date();
         this.count = 0;
+        this.x = 0;
+        this.y = 0;
     }
     setDateTimeCount(datetime, count) {
         this.datetime = datetime;
         this.count = count;
         this.render();
     }
+    setPosition(x, y) {
+        this.x = x;
+        this.y = y;
+    }
     compose() {
-        return jdom`<div class="datetimecount">
-            ${this.datetime.toString()}
-            ${this.count} visits
+        const d = this.datetime;
+        return jdom`<div class="datetimecount"
+            style="transform:translate(${this.x}px, calc(${this.y}px - 100%))">
+            <div class="dtc-datetime">
+                ${d.getFullYear()}/${d.getMonth()}/${d.getDate()}
+                ${d.getHours()}:${d.getMinutes()}
+            </div>
+            <div class="dtc-visits">${this.count} visits</div>
         </div>`
     }
 }
@@ -101,6 +112,12 @@ class Dashboard extends Component {
 	init() {
 		this.search = '';
         this.canvas = document.createElement('canvas');
+        this.canvas.addEventListener('mouseover', evt => {
+            this.node.classList.add('hover');
+        });
+        this.canvas.addEventListener('mouseout', evt => {
+            this.node.classList.remove('hover');
+        });
         this.canvas.addEventListener('mousemove', evt => {
             const {clientX, clientY} = evt.pointers ? evt.pointers[0] : evt;
             const {x, y} = this.canvas.getBoundingClientRect();
@@ -119,6 +136,7 @@ class Dashboard extends Component {
                 new Date(jsDate),
                 this.searchedVisitCounts[index],
             );
+            this.dtc.setPosition(clientX, clientY);
         });
         this.ctx = this.canvas.getContext('2d');
 
@@ -134,7 +152,7 @@ class Dashboard extends Component {
 
         this.dtc = new DateTimeCountDisplay();
 	}
-    renderHeatmap() {
+    renderHeatmap(searchedItems) {
         requestAnimationFrame(() => {
             if (!this.histItems.length) {
                 return;
@@ -150,7 +168,7 @@ class Dashboard extends Component {
             const VERT_INCREMENT = this.VERT_INCREMENT;
             const HORIZ_INCREMENT = this.HORIZ_INCREMENT;
 
-            const searchedVisitTimes = this.histItems
+            const searchedVisitTimes = searchedItems 
                 .map(item => Object.keys(item.visits))
                 .flat()
                 .map(time => +time);
@@ -189,7 +207,7 @@ class Dashboard extends Component {
 		const loweredSearch = this.search.toLowerCase();
 		const searchedItems = this.histItems.filter(item => item.url.toLowerCase().includes(loweredSearch));
 
-        this.renderHeatmap();
+        this.renderHeatmap(searchedItems);
 
 		return jdom`<div class="dashboard">
             ${this.dtc.node}

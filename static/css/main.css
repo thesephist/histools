@@ -117,7 +117,22 @@ header {
 }
 
 .datetimecount {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
+    pointer-events: none;
+    z-index: 1000;
+    padding: .4em .8em;
+    background: rgba(255, 255, 255, .75);
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
+}
+
+.dashboard:not(.hover) .datetimecount {
+    display: none;
+}
+
+.dtc-visits {
+    color: var(--paper-accent);
+    font-weight: bold;
 }
